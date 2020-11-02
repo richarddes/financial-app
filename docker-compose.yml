@@ -1,0 +1,191 @@
+version: "3.6"
+
+services:
+  database:
+    image: financial_database
+    build:
+      context: ./database
+    expose: 
+      - "5432"
+    volumes: 
+      - database:/var/lib/postgres/data
+    environment: 
+      POSTGRES_USER: service_user
+      POSTGRES_PASSWORD: /run/secrets/db_password
+      POSTGRES_DB: database
+    secrets:
+      - db_password
+    networks: 
+      - db_net
+
+  news_service:
+    image: financial_news_service
+    build: 
+      context: ./news-service
+    environment: 
+      NEWS_API_KEY: /run/secrets/newsapi_key
+      DB_USER: service_user
+      DB_PASSWORD: /run/secrets/db_password
+      DB_PORT: 5432
+      DB_NAME: database
+      DB_HOST: database
+      # a comma seperated list of 2 lettter ISO-639-1 codes
+      SUPPORTED_LANGUAGES: "en,de"
+    secrets:
+      - newsapi_key
+      - db_password
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.05"
+          memory: "50M"
+      restart_policy:
+        condition: on-failure
+    expose:
+      - "8083"
+    depends_on:
+      - database
+    networks: 
+      - db_net
+      - service_net
+
+  stock_service:
+    image: financial_stock_service
+    build: 
+      context: ./stock-service
+    environment: 
+      IEX_CLOUD_KEY: /run/secrets/iex_cloud_key
+      DEV_MODE: "false"
+    secrets:
+      - iex_cloud_key
+    deploy: 
+      replicas: 1
+      resources: 
+        limits:
+          cpus: "0.05"
+          memory: "50M"
+      restart_policy:
+        condition: on-failure
+    expose:
+      - "8082"
+    networks: 
+      - service_net
+
+  user_service:
+    image: financial_user_service
+    build: 
+      context: ./user-service
+    environment: 
+      DB_USER: service_user
+      DB_PASSWORD: /run/secrets/db_password
+      DB_PORT: 5432
+      DB_NAME: database
+      DB_HOST: database
+      # a comma seperated list of 2 lettter ISO-639-1 codes
+      SUPPORTED_LANGUAGES: "en,de"
+    secrets:
+      - db_password
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.05"
+          memory: "50M"
+      restart_policy:
+        condition: on-failure
+    expose:
+      - "8081"
+    depends_on:
+      - database
+      - news_service
+      - stock_service
+    networks: 
+      - db_net
+      - service_net
+
+  auth_proxy:
+    image: financial_auth_proxy
+    build: 
+      context: ./auth-proxy
+    environment: 
+      JWT_KEY: /run/secrets/jwt_key
+      CSRF_KEY: /run/secrets/csrf_key
+      DB_USER: service_user
+      DB_PASSWORD: /run/secrets/db_password
+      DB_PORT: 5432
+      DB_NAME: database
+      DB_HOST: database
+      # a comma seperated list of 2 lettter ISO-639-1 codes
+      SUPPORTED_LANGUAGES: "en,de"
+    secrets:
+      - jwt_key
+      - csrf_key
+      - db_password
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.05"
+          memory: "50M"
+      restart_policy:
+        condition: on-failure
+    expose:
+      - "9000"
+    depends_on: 
+      - database
+      - stock_service
+      - news_service
+      - user_service
+    networks: 
+      - db_net
+      - service_net
+      - proxy_net
+
+  http_server:
+    image: financial_http-server
+    build: 
+      context: ./http-server
+    secrets: 
+      - site.key
+      - site.crt
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.05"
+          memory: 50M
+      restart_policy:
+        condition: on-failure
+    ports: 
+      - "80:80"
+      - "443:443"
+    depends_on: 
+      - auth_proxy
+    networks: 
+      - proxy_net
+    
+
+volumes: 
+  database:
+
+networks:
+  db_net:
+  service_net:
+  proxy_net:
+
+secrets:
+  db_password:
+    external: true
+  newsapi_key:
+    external: true
+  iex_cloud_key:
+    external: true
+  csrf_key:
+    external: true
+  jwt_key:
+    external: true
+  site.key:
+    external: true
+  site.crt:
+    external: true

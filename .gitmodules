@@ -1,0 +1,21 @@
+[submodule "financial-app-user-service"]
+	path = financial-app-user-service
+	url = https://github.com/richarddes/financial-app-user-service.git
+[submodule "financial-app-stock-service"]
+	path = financial-app-stock-service
+	url = https://github.com/richarddes/financial-app-stock-service.git
+[submodule "financial-app-news-service"]
+	path = financial-app-news-service
+	url = https://github.com/richarddes/financial-app-news-service.git
+[submodule "financial-app-http-server"]
+	path = financial-app-http-server
+	url = https://github.com/richarddes/financial-app-http-server.git
+[submodule "financial-app-database"]
+	path = financial-app-database
+	url = https://github.com/richarddes/financial-app-database.git
+[submodule "financial-app-auth-proxy"]
+	path = financial-app-auth-proxy
+	url = https://github.com/richarddes/financial-app-auth-proxy.git
+[submodule "financial-app-frontend"]
+	path = financial-app-frontend
+	url = https://github.com/richarddes/financial-app-frontend.git
